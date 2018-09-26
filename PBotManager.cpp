@@ -49,5 +49,5 @@ Connection :: Connection(tcp::socket *socket)
 //Message getNext
 int main()
 {
-	retuen 0;
+	return 0;
 }
