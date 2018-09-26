@@ -47,3 +47,7 @@ Connection :: Connection(tcp::socket *socket)
 	this->socket=socket;
 }
 //Message getNext
+int main()
+{
+	retuen 0;
+}
