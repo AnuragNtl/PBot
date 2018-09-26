@@ -37,13 +37,13 @@ BotServer :: BotServer(int port)
 class Connection
 {
 	private:
-	tcp::socket &socket;
+	tcp::socket *socket;
 	public:
 	Connection(tcp::socket &);
 	Message getNextMessage();
 };
-Connection :: Connection(tcp::socket &socket)
+Connection :: Connection(tcp::socket *socket)
 {
 	this->socket=socket;
 }
-Message getNext
+//Message getNext
