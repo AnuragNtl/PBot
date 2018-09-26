@@ -6,7 +6,7 @@ using namespace std;
 using boost::asio::ip::tcp;
 struct Message
 {
-	static enum MESSAGE_TYPES{LOAD,EXEC};
+	enum MESSAGE_TYPES{LOAD,EXEC};
 	int msgType;
 	string data;
 	Message(int,string);
