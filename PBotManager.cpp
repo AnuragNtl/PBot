@@ -39,7 +39,7 @@ class Connection
 	private:
 	tcp::socket *socket;
 	public:
-	Connection(tcp::socket &);
+	Connection(tcp::socket *);
 	Message getNextMessage();
 };
 Connection :: Connection(tcp::socket *socket)
