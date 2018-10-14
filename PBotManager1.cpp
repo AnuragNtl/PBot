@@ -4,11 +4,8 @@
 #include<boost/asio.hpp>
 #include<boost/thread.hpp>
 #include<vector>
-#include<boost/property_tree/ptree.hpp>
-#include<boost/property_tree/json_parser.hpp>
 using namespace std;
 using boost::asio::ip::tcp;
-using namespace boost::property_tree;
 class Message;
 class MessageReceiver
 {
@@ -18,21 +15,14 @@ public:
 struct Message
 {
     string sender;
-    enum MESSAGE_TYPES{LOAD,EXEC,INCOMPLETE_MESSAGE,INVALID_MESSAGE};
+    enum MESSAGE_TYPES{LOAD,EXEC};
     int msgType;
     string data;
     Message(int,string);
-    operator string();
 };
 Message :: Message(int mType,string d) : msgType(mType),data(d)
 {
 
-}
-Message :: operator string()
-{
-char buf[20];
-sprintf(buf,"%d",msgType);
-return string(buf)+" "+data;
 }
 class Connection;
 class BotServer
@@ -48,7 +38,6 @@ private:
 class Connection
 {
     private:
-    string nextBuf;
     tcp::socket *socket;
     public:
     Connection(tcp::socket *);
@@ -64,7 +53,6 @@ void BotServer :: startListen(tcp::socket *socket)
     do
     {
         Message msg=con->getNextMessage();
-        cout <<"Message Arrived " <<(string)msg <<endl;
     }
     while(1);
 }
@@ -79,27 +67,20 @@ void BotServer :: start()
         boost::thread *thrd1=new boost::thread(startListen,socket);
     }
 }
-Connection :: Connection(tcp::socket *socket) : nextBuf("")
+Connection :: Connection(tcp::socket *socket)
 {
     this->socket=socket;
 }
 Message Connection :: getNextMessage()
 {
+        vector<char> buf(4);
     boost::system::error_code error;
-    string bndry="\\\\\\\\\\\\\"\"\"\"\"\"//////";
-    boost::asio::streambuf buf;
-    boost::asio::read_until(*socket,buf,bndry);
-    istream in(&buf);
-    string data( (std::istreambuf_iterator<char>(&buf)), std::istreambuf_iterator<char>() );
-    data.resize(data.size()-bndry.size());
-    cout <<data <<endl;
-    ptree root;
-    istringstream ss(data);
-    read_json(ss,root);
-    int msgType=root.get_child("msgType").get_value<int>();
-    cout <<msgType <<endl;
-    string d1=root.get_child("data").get_value<string>();
-    return Message(msgType,d1);
+    write(*socket,boost::asio::buffer("abcd"));
+    socket->read_some(boost::asio::buffer(buf),error);
+    for(int i=0;i<buf.size();i++)
+        cout <<buf[i];
+    cout <<endl;
+    return Message(Message::LOAD,"");
 }
 int main()
 {
