@@ -56,5 +56,28 @@ void sendEvent(string receiver,string event)
 	ptree tree;
 	tree.put("sender","general");
 	tree.put("msgType","general");
-	tree.put
+	tree.put("data")
 }
+/*
+function getFile(file)
+{
+	
+}
+function saveFile(file,mode,data)
+{
+	
+}
+function onEvent(e)
+{
+	
+}
+function exec(command)
+{
+	
+}
+function require(file)
+{
+	
+}
+
+*/

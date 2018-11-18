@@ -8,10 +8,12 @@
 #include<boost/property_tree/json_parser.hpp>
 #include<boost/process.hpp>
 #include<boost/filesystem.hpp>
+#include<boost/optional.hpp>
 using namespace std;
 using boost::asio::ip::tcp;
 using namespace boost::property_tree;
 using namespace boost::process;
+using boost::optional;
 class Message;
 class Connection;
 string getData(string file);
@@ -30,6 +32,7 @@ struct Message
     string data;
     Message(int,string);
     operator string();
+    ptree extras;
 };
 Message :: Message(int mType,string d) : msgType(mType),data(d)
 {
@@ -46,33 +49,55 @@ class BotServer
 {
 private:
     int port;
+    static map<string,tcp::socket*> connections;
+    static boost::mutex *connectionMutex;
     static void startListen(tcp::socket*,BotServer *);
     MessageReceiver *msgReceiver;
     public:
     BotServer(int,MessageReceiver *);
     void stop();
     void start();
+    static void putConnection(string,tcp::socket*);
+    static tcp::socket* getConnection(string sender)
+    {
+        tcp::socket *r=NULL;
+        connectionMutex->lock();
+        if(connections.find(sender)!=connections.end())
+        r=connections[sender];
+    connectionMutex->unlock();
+    return r;
+    }
 };
+boost::mutex* BotServer :: connectionMutex=new boost::mutex;
+map<string,tcp::socket*> BotServer :: connections=map<string,tcp::socket*>();
 class Connection
 {
     private:
     string nextBuf;
     tcp::socket *socket;
-    Connection(tcp::socket *);
+    string boundary;
+    Connection(tcp::socket *,string);
     Message getNextMessage();
     friend class BotServer;
 public:
     void sendResponse(string);
+    void sendResponse(ptree &);
 };
 BotServer :: BotServer(int port,MessageReceiver *msgReceiver) : msgReceiver(msgReceiver)
 {
     this->port=port;
 }
+void BotServer :: putConnection(string sender,tcp::socket *con)
+{
+    connectionMutex->lock();
+    connections[sender]=con;
+    connectionMutex->unlock();
+}
 void BotServer :: startListen(tcp::socket *socket,BotServer *bServer)
 {
     try
     {
-    Connection *con=new Connection(socket);
+    Connection *con=new Connection(socket,bndry);
     do
     {
         Message msg=con->getNextMessage();
@@ -94,13 +119,19 @@ void BotServer :: start()
         boost::thread *thrd1=new boost::thread(startListen,socket,this);
     }
 }
-Connection :: Connection(tcp::socket *socket) : nextBuf("")
+Connection :: Connection(tcp::socket *socket,string boundary) : nextBuf(""),boundary(boundary)
 {
     this->socket=socket;
 }
 void Connection :: sendResponse(string response)
 {
-    boost::asio::write(*socket,boost::asio::buffer(response));
+    boost::asio::write(*socket,boost::asio::buffer(response+boundary));
+}
+void Connection :: sendResponse(ptree &tree)
+{
+    ostringstream buf;
+    write_json(buf,tree,false);
+    sendResponse(buf.str());
 }
 Message Connection :: getNextMessage()
 {
@@ -126,10 +157,19 @@ Message Connection :: getNextMessage()
     }
     int msgType=root.get_child("msgType").get_value<int>();
     cout <<msgType <<endl;
-    string d1=root.get_child("data").get_value<string>();
+    string d1="";
+    optional<ptree &> o1=root.get_child_optional("data");
+    if(o1)
+        d1=o1->get_value<string>();
+    cout <<d1 <<endl;
+    optional<ptree &>extras1=root.get_child_optional("extras");
+    ptree extras;
+    if(extras1)
+        extras=*extras1;
     string sender=root.get_child("sender").get_value<string>();
     Message r(msgType,d1);
     r.sender=sender;
+    r.extras=extras;
     return r;
 }
 boost::mutex receiveMutex;
@@ -157,9 +197,7 @@ void PBotMessageReceiver :: receive(Message msg,Connection *con)
     ptree resp;
     resp.put("output",output);
     resp.put("err_code",k.value());
-    ostringstream buf;
-    write_json(buf,resp,false);
-    con->sendResponse(buf.str()+bndry);
+    con->sendResponse(resp);
     }
     break;
     case (Message::LOAD):
@@ -169,11 +207,39 @@ void PBotMessageReceiver :: receive(Message msg,Connection *con)
         if(boost::filesystem::exists(msg.sender+".load.js"))
         getData(msg.sender+".load.js");
         ptree resp;
-        ostringstream buf;
         resp.put("load",k1);
-        write_json(buf,resp,false);
-    con->sendResponse(buf+bndry);
+    con->sendResponse(resp);
     //receiveMutex.unlock();
+    }
+    break;
+    case (Message::SEND_EVENT):
+    {
+
+    }
+    break;
+    case (Message::REQUIRE_FILE):
+    {
+        optional<ptree &> file1=msg.extras.get_child_optional("file");
+        ptree resp;
+        if(!file1)
+        {
+            resp.put("error","File Not Given");
+        }
+        else
+        {
+            string file=file1->get_value<string>();
+            if(!boost::filesystem::exists("dependencies/"+file))
+            {
+                resp.put("error","File Not Found");
+            }
+            else
+            {
+                string data=getData("dependencies/"+file);
+                resp.put("load",data);
+            }
+
+        }
+        con->sendResponse(resp);
     }
     break;
     default:exit(0);
