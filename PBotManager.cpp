@@ -7,6 +7,7 @@
 #include<boost/property_tree/ptree.hpp>
 #include<boost/property_tree/json_parser.hpp>
 #include<boost/process.hpp>
+#include<boost/filesystem.hpp>
 using namespace std;
 using boost::asio::ip::tcp;
 using namespace boost::property_tree;
@@ -23,7 +24,8 @@ public:
 struct Message
 {
     string sender;
-    enum MESSAGE_TYPES{LOAD,EXEC,INCOMPLETE_MESSAGE,INVALID_MESSAGE};
+    enum MESSAGE_TYPES{LOAD,EXEC,INVALID_MESSAGE,SEND_EVENT,REQUIRE_FILE,GENERAL};
+    Message() : msgType(INVALID_MESSAGE){}
     int msgType;
     string data;
     Message(int,string);
@@ -163,7 +165,14 @@ void PBotMessageReceiver :: receive(Message msg,Connection *con)
     case (Message::LOAD):
     {
     //receiveMutex.lock();
-    con->sendResponse(getData(msg.sender+".load.json")+bndry);
+        string k1="";
+        if(boost::filesystem::exists(msg.sender+".load.js"))
+        getData(msg.sender+".load.js");
+        ptree resp;
+        ostringstream buf;
+        resp.put("load",k1);
+        write_json(buf,resp,false);
+    con->sendResponse(buf+bndry);
     //receiveMutex.unlock();
     }
     break;
