@@ -49,7 +49,7 @@ class BotServer
 {
 private:
     int port;
-    static map<string,tcp::socket*> connections;
+    static map<string,Connection*> connections;
     static boost::mutex *connectionMutex;
     static void startListen(tcp::socket*,BotServer *);
     MessageReceiver *msgReceiver;
@@ -57,10 +57,10 @@ private:
     BotServer(int,MessageReceiver *);
     void stop();
     void start();
-    static void putConnection(string,tcp::socket*);
-    static tcp::socket* getConnection(string sender)
+    static void putConnection(string,Connection*);
+    static Connection* getConnection(string sender)
     {
-        tcp::socket *r=NULL;
+        Connection *r=NULL;
         connectionMutex->lock();
         if(connections.find(sender)!=connections.end())
         r=connections[sender];
@@ -69,7 +69,7 @@ private:
     }
 };
 boost::mutex* BotServer :: connectionMutex=new boost::mutex;
-map<string,tcp::socket*> BotServer :: connections=map<string,tcp::socket*>();
+map<string,Connection*> BotServer :: connections=map<string,Connection*>();
 class Connection
 {
     private:
@@ -88,7 +88,7 @@ BotServer :: BotServer(int port,MessageReceiver *msgReceiver) : msgReceiver(msgR
 {
     this->port=port;
 }
-void BotServer :: putConnection(string sender,tcp::socket *con)
+void BotServer :: putConnection(string sender,Connection *con)
 {
     connectionMutex->lock();
     connections[sender]=con;
@@ -203,6 +203,7 @@ void PBotMessageReceiver :: receive(Message msg,Connection *con)
     break;
     case (Message::LOAD):
     {
+    	BotServer::putConnection(msg.sender,con);
     //receiveMutex.lock();
         string k1="";
         if(boost::filesystem::exists(msg.sender+".load.js"))
@@ -215,7 +216,26 @@ void PBotMessageReceiver :: receive(Message msg,Connection *con)
     break;
     case (Message::SEND_EVENT):
     {
-
+    	ptree resp;
+    	optional<ptree &> receiverOpt=msg.extras.get_child_optional("receiver"),eventOpt=msg.extras.get_child_optional("event"),dataOpt=msg.extras.get_child_optional("data");
+    	string receiver,event,data;
+    	if(!receiverOpt || !dataOpt || !eventOpt)
+    	{
+    		resp.put("error","invalid request");
+    	}
+    	else
+    	{
+    	ptree payload;	receiver=receiverOpt->get_value<string>();
+    		event=eventOpt->get_value<string>();
+    		data=dataOpt->get_value<string>();
+    		payload.put("event",event);
+    		payload.put("data",data);
+    		payload.put("receiver",receiver);
+    		Connection *recvCon=BotServer::getConnection(receiver);
+    		recvCon->sendResponse(payload);
+    		resp.put("success","sent event");
+    	}
+    	con->sendResponse(resp);
     }
     break;
     case (Message::REQUIRE_FILE):
