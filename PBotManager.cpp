@@ -82,6 +82,7 @@ class Connection
 public:
     void sendResponse(string);
     void sendResponse(ptree &);
+    bool isConnected();
 };
 BotServer :: BotServer(int port,MessageReceiver *msgReceiver) : msgReceiver(msgReceiver)
 {
