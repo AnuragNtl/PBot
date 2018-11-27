@@ -226,7 +226,7 @@ void PBotMessageReceiver :: receive(Message msg,Connection *con)
     	{
     	ptree payload;	receiver=receiverOpt->get_value<string>();
     		event=eventOpt->get_value<string>();
-    		data=dataOpt->get_value<string>();
+    		data=dataOpt->get_value<ptree>();
     		payload.put("event",event);
     		payload.put("data",data);
     		payload.put("receiver",receiver);
