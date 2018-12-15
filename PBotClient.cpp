@@ -8,6 +8,7 @@ using namespace boost::property_tree;
 using namespace std;
 using boost::asio::ip::tcp;
 const string bndry="\\\\\\\\\\\\\"\"\"\"\"\"//////";
+bool sendEvent(string,string,string,tcp::socket&);
 string getNextMessage()
 {
 		char rawLen[4];
@@ -25,6 +26,12 @@ string getNextMessage()
 void sendMessage(string);
 int main(int argc,char *argv[])
 {
+	if(string(argv[1])=="--help")
+	{
+		cout <<"PBotClient:\n";
+		cout <<"Usage: PBotClient RECEIVER EVENT_NAME JSON_DATA\n";
+		return 0;
+	}
 	string host="localhost";
 	boost::asio::io_service ioService;
 	tcp::resolver resolver(ioService);
@@ -32,6 +39,17 @@ tcp::resolver::query q(string(host),"8822");
 tcp::resolver::iterator it1=resolver.resolve(q);
 tcp::socket socket(ioService);
 boost::asio::connect(socket,it1);
+if(argc==4)
+{
+sendEvent(argv[1],argv[2],argv[3],socket);
+boost::asio::streambuf buf;
+boost::asio::read_until(socket,buf,bndry);
+istream in(&buf);
+    string data((std::istreambuf_iterator<char>(&buf)), std::istreambuf_iterator<char>());
+data.resize(data.find(bndry));
+cout <<data <<endl;
+return 0;
+}
 while(true)
 {
 	string data1=getNextMessage();
@@ -54,12 +72,29 @@ void sendMessage(string msg)
 	fwrite(msg.c_str(),msgLen,sizeof(char),stdout);
 	fflush(stdout);
 }
-void sendEvent(string receiver,string event)
+bool sendEvent(string receiver,string event,string data,tcp::socket &s)
 {
-	ostringstream buf;
+	istringstream ss(data);
+	ptree eventDetails;
+	try
+	{
+		read_json(ss,eventDetails);
+	}
+	catch(boost::exception &e)
+	{
+		return false;
+	}
 	ptree tree;
 	ptree extras;
 	tree.put("sender","general");
-	tree.put("msgType","general");
-
+	tree.put("msgType",3);
+	tree.put("data","");
+	extras.put("receiver",receiver);
+	extras.put("event",event);
+	extras.add_child("data",eventDetails);
+	tree.add_child("extras",extras);
+	ostringstream ss1;
+	write_json(ss1,tree,false);
+	write(s,boost::asio::buffer(ss1.str()+bndry));
+	return true;
 }
