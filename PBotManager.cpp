@@ -207,7 +207,13 @@ void PBotMessageReceiver :: receive(Message msg,Connection *con)
     //receiveMutex.lock();
         string k1="";
         if(boost::filesystem::exists(msg.sender+".load.js"))
-        getData(msg.sender+".load.js");
+        k1=getData(msg.sender+".load.js");
+        string frameworkData=getData("framework.bundle.js");
+        int insertIndx=frameworkData.find("///////////////////////");
+        string firstPart,secondPart;
+        firstPart.insert(0,frameworkData,0,insertIndx);
+        secondPart.insert(0,frameworkData,insertIndx,frameworkData.size()-insertIndx);
+        k1=firstPart+k1+secondPart;
         ptree resp;
         resp.put("load",k1);
     con->sendResponse(resp);
@@ -218,23 +224,30 @@ void PBotMessageReceiver :: receive(Message msg,Connection *con)
     {
     	ptree resp;
     	optional<ptree &> receiverOpt=msg.extras.get_child_optional("receiver"),eventOpt=msg.extras.get_child_optional("event"),dataOpt=msg.extras.get_child_optional("data");
-    	string receiver,event,data;
+    	string receiver,event;
+        ptree data;
     	if(!receiverOpt || !dataOpt || !eventOpt)
     	{
     		resp.put("error","invalid request");
     	}
     	else
     	{
-    	ptree payload;	receiver=receiverOpt->get_value<string>();
+    	ptree payload;
+        receiver=receiverOpt->get_value<string>();
     		event=eventOpt->get_value<string>();
-    		data=dataOpt->get_value<ptree>();
+    		data=*dataOpt;
     		payload.put("event",event);
-    		payload.put("data",data);
+    		payload.add_child("data",data);
     		payload.put("receiver",receiver);
     		Connection *recvCon=BotServer::getConnection(receiver);
+            if(recvCon)
+            {
     		recvCon->sendResponse(payload);
     		resp.put("success","sent event");
     	}
+        else
+            resp.put("error","receiver not active");
+        }
     	con->sendResponse(resp);
     }
     break;

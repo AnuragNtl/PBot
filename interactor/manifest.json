@@ -4,7 +4,7 @@
   "name": "Bot",
   "version": "1.0",
 
-  "description": "Bot",
+  "description": "PBot",
 
 "applications": {
     "gecko": {
@@ -14,7 +14,10 @@
   },
   "background": {
     "scripts": ["bot.js"]
-  }
+  },
+  "content_scripts":[
+  {"matches":["*://*/*"],"js":["content.js"]}
+  ]
   ,
   "permissions": ["nativeMessaging"]
 

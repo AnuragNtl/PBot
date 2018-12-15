@@ -32,6 +32,8 @@ tcp::resolver::query q(string(host),"8822");
 tcp::resolver::iterator it1=resolver.resolve(q);
 tcp::socket socket(ioService);
 boost::asio::connect(socket,it1);
+while(true)
+{
 	string data1=getNextMessage();
 write(socket,boost::asio::buffer(data1+bndry));
 boost::asio::streambuf buf;
@@ -40,6 +42,7 @@ istream in(&buf);
     string data((std::istreambuf_iterator<char>(&buf)), std::istreambuf_iterator<char>());
         data.resize(data.find(bndry));
         sendMessage(data);
+    }
         socket.close();
 return 0;
 }
@@ -49,35 +52,14 @@ void sendMessage(string msg)
 	char *rLen=reinterpret_cast<char *>(&msgLen);
 	fwrite(rLen,4,sizeof(char),stdout);
 	fwrite(msg.c_str(),msgLen,sizeof(char),stdout);
+	fflush(stdout);
 }
 void sendEvent(string receiver,string event)
 {
 	ostringstream buf;
 	ptree tree;
+	ptree extras;
 	tree.put("sender","general");
 	tree.put("msgType","general");
-	tree.put("data")
-}
-/*
-function getFile(file)
-{
-	
-}
-function saveFile(file,mode,data)
-{
-	
-}
-function onEvent(e)
-{
-	
-}
-function exec(command)
-{
-	
-}
-function require(file)
-{
-	
-}
 
-*/
+}
