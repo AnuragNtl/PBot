@@ -69,7 +69,6 @@ browser.runtime.onMessage.addListener(function(response)
 
 //document.onload=function()
 {
-	alert("started");
 			sender=window.top.location.href.match(/:\/\/.+?\//)[0].replace(/\/|:/g,"");
 		browser.runtime.sendMessage({sender:sender,msgType:0,data:""});
 }
