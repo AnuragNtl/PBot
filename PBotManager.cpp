@@ -17,6 +17,7 @@ using boost::optional;
 class Message;
 class Connection;
 string getData(string file);
+string basePath="";
 const string bndry="\\\\\\\\\\\\\"\"\"\"\"\"//////";
 class MessageReceiver
 {
@@ -207,13 +208,7 @@ void PBotMessageReceiver :: receive(Message msg,Connection *con)
     //receiveMutex.lock();
         string k1="";
         if(boost::filesystem::exists(msg.sender+".load.js"))
-        k1=getData(msg.sender+".load.js");
-        string frameworkData=getData("framework.bundle.js");
-        int insertIndx=frameworkData.find("///////////////////////");
-        string firstPart,secondPart;
-        firstPart.insert(0,frameworkData,0,insertIndx);
-        secondPart.insert(0,frameworkData,insertIndx,frameworkData.size()-insertIndx);
-        k1=firstPart+k1+secondPart;
+        k1=getData(basePath+msg.sender+".load.js");
         ptree resp;
         resp.put("load",k1);
     con->sendResponse(resp);
@@ -268,7 +263,7 @@ void PBotMessageReceiver :: receive(Message msg,Connection *con)
             }
             else
             {
-                string data=getData("dependencies/"+file);
+                string data=getData(basePath+file);
                 resp.put("load",data);
             }
 
@@ -282,6 +277,19 @@ void PBotMessageReceiver :: receive(Message msg,Connection *con)
 }
 int main()
 {
+ if(boost::filesystem::exists("PBotConfig.json"))
+ {   
+string rawPathData=getData("PBotConfig.json");
+try
+{
+    ptree root;
+ istringstream ss(rawPathData);
+ read_json(ss,root);
+ basePath=root.get_child("base_path").get_value<string>();
+ basePath=(basePath[basePath.size()-1]=='/'?basePath:basePath+"/");
+}
+catch(boost::exception &e){}
+}
 BotServer server(8822,new PBotMessageReceiver);
 server.start();
     return 0;
