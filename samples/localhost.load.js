@@ -3,7 +3,7 @@ pBot.onLoad(function()
 alert("loaded");
 pBot.exec("ls",function(data)
 {
-	alert(JSON.stringify(data.output));
+	alert(JSON.stringify(data));
 });
-
+pBot.on("e1",()=>alert("e1"));
 });

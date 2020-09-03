@@ -1,7 +1,7 @@
 {
   "name": "pbot",
   "description": "__",
-  "path": "/home/administrator/PBot/PBotClient",
+  "path": "/usr/local/bin/PBotClient",
   "type": "stdio",
   "allowed_extensions": [ "pbot@example.com" ]
 }

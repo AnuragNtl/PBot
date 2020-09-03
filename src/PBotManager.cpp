@@ -9,6 +9,7 @@
 #include<boost/process.hpp>
 #include<boost/filesystem.hpp>
 #include<boost/optional.hpp>
+#include "GetConfigPath.h"
 using namespace std;
 using boost::asio::ip::tcp;
 using namespace boost::property_tree;
@@ -16,7 +17,6 @@ using namespace boost::process;
 using boost::optional;
 class Message;
 class Connection;
-string getData(string file);
 string basePath="";
 const string bndry="\\\\\\\\\\\\\"\"\"\"\"\"//////";
 class MessageReceiver
@@ -103,7 +103,7 @@ void BotServer :: startListen(tcp::socket *socket,BotServer *bServer)
     do
     {
         Message msg=con->getNextMessage();
-     //   cout <<"Message Arrived " <<(string)msg <<endl;
+        cout <<"Message Arrived " <<(string)msg <<endl;
         bServer->msgReceiver->receive(msg,con);
     }
     while(1);
@@ -207,7 +207,7 @@ void PBotMessageReceiver :: receive(Message msg,Connection *con)
     	BotServer::putConnection(msg.sender,con);
     //receiveMutex.lock();
         string k1="";
-        if(boost::filesystem::exists(msg.sender+".load.js"))
+        if(boost::filesystem::exists(basePath + msg.sender+".load.js"))
         k1=getData(basePath+msg.sender+".load.js");
         ptree resp;
         resp.put("load",k1);
@@ -257,7 +257,7 @@ void PBotMessageReceiver :: receive(Message msg,Connection *con)
         else
         {
             string file=file1->get_value<string>();
-            if(!boost::filesystem::exists("dependencies/"+file))
+            if(!boost::filesystem::exists(basePath + file))
             {
                 resp.put("error","File Not Found");
             }
@@ -277,39 +277,10 @@ void PBotMessageReceiver :: receive(Message msg,Connection *con)
 }
 int main()
 {
- if(boost::filesystem::exists("PBotConfig.json"))
- {   
-string rawPathData=getData("PBotConfig.json");
-try
-{
-    ptree root;
- istringstream ss(rawPathData);
- read_json(ss,root);
- basePath=root.get_child("base_path").get_value<string>();
- basePath=(basePath[basePath.size()-1]=='/'?basePath:basePath+"/");
-}
-catch(boost::exception &e){}
-}
+basePath = getBasePath() + "/"; 
+cout << "Using base path " << basePath << "\n";
 BotServer server(8822,new PBotMessageReceiver);
 server.start();
     return 0;
 }
-string getData(string file)
-{
-    ifstream in(file.c_str());
-    int ct=0;
-    string r="";
-    char *buf=new char[1024];
-    do
-    {
-        in.getline(buf,1024);
-        ct=in.gcount();
-        if(ct>0)
-        r=r+buf+"\n";
-    }
-    while(ct>0);
-    if(r.size()>0)
-    r.resize(r.size()-1);
-    in.close();
-    return r;
-}
+

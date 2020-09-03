@@ -4,10 +4,19 @@
 #include<fstream>
 #include<boost/property_tree/ptree.hpp>
 #include<boost/property_tree/json_parser.hpp>
+#include<queue>
+#include<boost/thread.hpp>
+
 using namespace boost::property_tree;
 using namespace std;
 using boost::asio::ip::tcp;
 const string bndry="\\\\\\\\\\\\\"\"\"\"\"\"//////";
+void log(string message)
+{
+	ofstream out("/tmp/T1.txt",ios::out | ios::app);
+	out <<message <<endl;
+	out.close();
+}
 bool sendEvent(string,string,string,tcp::socket&);
 string getNextMessage()
 {
@@ -23,10 +32,30 @@ string getNextMessage()
 	delete[] msg;
 	return msg1;
 }
+void addToMessages(tcp::socket *socket)
+{
+	while(true)
+	{
+		string msg1=getNextMessage();
+	write(*socket,boost::asio::buffer(msg1+bndry));
+	}
+}
 void sendMessage(string);
+void handleMessage(tcp::socket *socket)
+{
+while(true)
+{
+boost::asio::streambuf buf;
+boost::asio::read_until(*socket,buf,bndry);
+istream in(&buf);
+    string data((std::istreambuf_iterator<char>(&buf)), std::istreambuf_iterator<char>());
+        data.resize(data.find(bndry));
+        sendMessage(data);
+    }
+}
 int main(int argc,char *argv[])
 {
-	if(string(argv[1])=="--help")
+	if(argc>1 && string(argv[1])=="--help")
 	{
 		cout <<"PBotClient:\n";
 		cout <<"Usage: PBotClient RECEIVER EVENT_NAME JSON_DATA\n";
@@ -47,20 +76,12 @@ boost::asio::read_until(socket,buf,bndry);
 istream in(&buf);
     string data((std::istreambuf_iterator<char>(&buf)), std::istreambuf_iterator<char>());
 data.resize(data.find(bndry));
-cout <<data <<endl;
+sendMessage(data);
 return 0;
 }
-while(true)
-{
-	string data1=getNextMessage();
-write(socket,boost::asio::buffer(data1+bndry));
-boost::asio::streambuf buf;
-boost::asio::read_until(socket,buf,bndry);
-istream in(&buf);
-    string data((std::istreambuf_iterator<char>(&buf)), std::istreambuf_iterator<char>());
-        data.resize(data.find(bndry));
-        sendMessage(data);
-    }
+boost::thread thrd1(addToMessages,&socket);
+boost::thread thrd2(handleMessage,&socket);
+while(true){}
         socket.close();
 return 0;
 }

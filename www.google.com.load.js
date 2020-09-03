@@ -1,1 +1,0 @@
-pBot.onLoad(function(){alert("Google");});
