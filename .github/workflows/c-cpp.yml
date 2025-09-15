@@ -15,6 +15,6 @@ jobs:
     - uses: actions/checkout@v4
     - name: configure
       run:
-        docker build -t PBotManager .
+        docker build -t pbot .
   
   
